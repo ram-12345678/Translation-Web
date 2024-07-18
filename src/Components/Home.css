@@ -1,0 +1,10 @@
+.container{
+padding: 0px 20px 20px 20px;
+}
+.container h1{
+  text-align: left;
+    }
+.container .css-dev-only-do-not-override-98ntnt.ant-col [class^="ant-col"], :where(.css-dev-only-do-not-override-98ntnt).ant-col [class*=" ant-col"] {
+    box-sizing: border-box;
+    text-align: left;
+}
