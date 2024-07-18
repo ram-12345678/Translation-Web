@@ -1,20 +1,15 @@
 
-import { SET_WEBRTC_CONNECTION, CLOSE_WEBRTC_CONNECTION } from "../actions/webrtcAction";
+import { USER_PROFILE_ID } from "../actions/webrtcAction";
 
 const intialState = {
-    connection: null
+    profileId: null
 };
 export const counterReducer = (state = intialState, action) => {
     switch (action.type) {
-        case SET_WEBRTC_CONNECTION:
+        case USER_PROFILE_ID:
             return {
                 ...state,
-                connection: action.payload
-            }
-        case CLOSE_WEBRTC_CONNECTION:
-            return {
-                ...state,
-                connection: null
+                profileId: action.profileId
             }
         default:
             return state;

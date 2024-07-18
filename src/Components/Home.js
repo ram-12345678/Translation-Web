@@ -1,33 +1,44 @@
 import React, { useState, useCallback, useEffect } from "react";
+import { connect } from 'react-redux';
+import { Form, Row, Col, Button, Input, Select } from 'antd';
 import { useNavigate } from "react-router-dom";
 import { useSocket } from "./SocketProvider";
-import { Form, Row, Col, Button, Input, Select } from 'antd'
-import './Home.css';
 import { languages } from "../constants/languages";
+import { setUserProfileId } from "../store/actions/webrtcAction";
+import './Home.css';
+
 const { Option } = Select;
 
-const HomePage = () => {
+const mapStateToProps = (state) => {
+    return {
+        profileId: state?.webrtcReducer?.profileId
+    }
+};
+
+const mapDispatchToProps = (dispatch) => ({
+    dispatchProfileId: (id) => dispatch(setUserProfileId(id))
+})
+const HomePageBase = (props) => {
     const [email, setEmail] = useState('');
     const [room, setRoom] = useState('');
-    const [profileId, setProfileId] = useState('');
     const [languageCode, setLanguageCode] = useState('');
-
-    // console.log(languageCode, 'languageCode')
+    const { profileId, dispatchProfileId } = props;
+ 
     const socket = useSocket();
     const navigate = useNavigate();
 
     const handleSubmitForm = useCallback(
         () => {
-            socket.emit("room:join", { email, room, profileId });
+            socket.emit("room:join", { email, room });
         },
-        [email, room, profileId, socket]
+        [email, room, socket]
     );
 
     const handleJoinRoom = useCallback(
         (data) => {
-            const { room, profileId } = data;
-            if (room && profileId) {
-                navigate(profileId === '1' ? `/room/${room}` : `/listenerRoom/${room}`);
+            const { room } = data;
+            if (room) {
+                navigate(`/room/${room}`);
             }
         },
         [navigate]
@@ -104,11 +115,11 @@ const HomePage = () => {
                                     type="number"
                                     id="profile"
                                     value={profileId}
-                                    onChange={(e) => setProfileId(e.target.value)}
+                                    onChange={(e) => dispatchProfileId(e.target.value)}
                                 />
                             </Form.Item>
                         </Col>
-                        {profileId === '2' && <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+                        {profileId && profileId === '2' && <Col xs={24} sm={24} md={12} lg={12} xl={12}>
                             <Form.Item
                                 label="Language"
                                 name="language"
@@ -139,4 +150,5 @@ const HomePage = () => {
     );
 };
 
+const HomePage = connect(mapStateToProps, mapDispatchToProps)(HomePageBase);
 export default HomePage;
