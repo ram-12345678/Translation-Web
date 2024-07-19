@@ -17,30 +17,32 @@ const { Option } = Select;
 // };
 
 const mapDispatchToProps = {
-    fetchUserProfileId: webrtcDataActions.fetchUserProfileId,
+    // fetchUserProfileId: webrtcDataActions.fetchUserProfileId,
     fetchLanguageCode: webrtcDataActions.fetchLanguageCode
 }
 
 const HomePageBase = (props) => {
     const [email, setEmail] = useState('');
     const [room, setRoom] = useState('');
-    const { fetchUserProfileId, fetchLanguageCode } = props;
+    const [profileId, setProfileId] = useState('');
+
+    const { fetchLanguageCode } = props;
 
     const socket = useSocket();
     const navigate = useNavigate();
 
     const handleSubmitForm = useCallback(
         () => {
-            socket.emit("room:join", { email, room });
+            socket.emit("room:join", { email, room, profileId });
         },
-        [email, room, socket]
+        [email, room, socket, profileId]
     );
 
     const handleJoinRoom = useCallback(
         (data) => {
-            const { room } = data;
-            if (room) {
-                navigate(`/room/${room}`);
+            const { profileId } = data;
+            if (profileId) {
+                profileId === 1 ? navigate(`/hostRoom/${profileId}`) : navigate(`/ListenerRoom/${profileId}`)
             }
         },
         [navigate]
@@ -56,6 +58,11 @@ const HomePageBase = (props) => {
     const onChangeLanguage = (value) => {
         fetchLanguageCode(value)
     }
+
+    const onChangeProfileId = (value) => {
+        setProfileId(value)
+    }
+    
     return (
         <div className="container">
             <h1>Welcome to My Translation Web Page</h1>
@@ -115,7 +122,7 @@ const HomePageBase = (props) => {
                                 rules={[{ required: true, message: 'Please Selec Profile' },
                                 ]}
                             >
-                                <Select onChange={(e) => fetchUserProfileId(e?.target?.value)} id="profile" placeholder='Please Select Profile'>
+                                <Select value={profileId} onChange={onChangeProfileId} id="profile" placeholder='Please Select Profile'>
                                     {userProfile?.map(item => <Option key={item?.id} value={item?.id} >{item?.name}</Option>)}
                                 </Select>
                             </Form.Item>
@@ -127,7 +134,7 @@ const HomePageBase = (props) => {
                                 rules={[{ required: true, message: 'Please Select Target Language' },
                                 ]}
                             >
-                                <Select onChange={onChangeLanguage} id="language" placeholder='Please Select Target Language'>
+                                <Select  onChange={onChangeLanguage} id="language" placeholder='Please Select Target Language'>
                                     {languages.map(item => <Option key={item.id} value={item.code} >{item.name}</Option>)}
                                 </Select>
                             </Form.Item>

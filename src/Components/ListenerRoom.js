@@ -1,44 +1,112 @@
 import React, { useEffect, useCallback, useState } from "react";
 import peer from "./peer";
 import { useSocket } from "./SocketProvider";
-import { message } from "antd";
+import { connect } from "react-redux";
+import webrtcDataActions from "../store/actions/webrtcAction";
+import { useNavigate } from "react-router-dom";
 
-const ListenerRoomPage = () => {
+const mapStateToProps = (state) => {
+  return {
+    // profileId: state?.webrtcReducer?.profileId,
+    languageCode: state?.webrtcReducer?.code,
+  }
+};
+const mapDispatchToProps = {
+  putVioceForTranslation: webrtcDataActions.putVioceForTranslation,
+  setHostRemoteStream: webrtcDataActions.setRemoteStream,
+  setHostMyStream: webrtcDataActions.setMyStream,
+  setReduxRemoteSocketId: webrtcDataActions.setRemoteSocketId
+
+}
+
+const ListenerRoomBase = (props) => {
   const socket = useSocket();
   const [remoteSocketId, setRemoteSocketId] = useState(null);
+  const [myStream, setMyStream] = useState();
   const [remoteStream, setRemoteStream] = useState();
+  // const { putVioceForTranslation, languageCode } = props;
+  const { setHostRemoteStream, setHostMyStream, setReduxRemoteSocketId } = props;
+
+  const navigate = useNavigate();
 
   const handleUserJoined = useCallback(({ email, id }) => {
     setRemoteSocketId(id);
+    setReduxRemoteSocketId(id);
   }, []);
+
+  const handleCallUser = useCallback(async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: false,
+    });
+    const offer = await peer.getOffer();
+    socket.emit("user:call", { to: remoteSocketId, offer });
+    setMyStream(stream);
+  }, [remoteSocketId, socket]);
+
+  useEffect(() => {
+    if (remoteSocketId) {
+      handleCallUser();
+    }
+  }, [socket, remoteSocketId, handleCallUser]);
 
   const handleIncommingCall = useCallback(
     async ({ from, offer }) => {
       setRemoteSocketId(from);
+      setReduxRemoteSocketId(from);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: false,
+      });
+      setMyStream(stream);
       const ans = await peer.getAnswer(offer);
       socket.emit("call:accepted", { to: from, ans });
     },
     [socket]
   );
 
+  // useEffect(() => {
+  //   if (myStream&&languageCode) {
+  //     putVioceForTranslation(myStream,languageCode);
+  //   }
+  // }, [myStream, putVioceForTranslation,languageCode])
+
+  useEffect(() => {
+    if (myStream) {
+      setHostMyStream(myStream);
+    }
+    if (remoteStream) {
+      setHostRemoteStream(remoteStream);
+    }
+  }, [myStream, remoteStream, setHostMyStream, setHostRemoteStream])
+
+  const sendStreams = useCallback(() => {
+    if (myStream) {
+      for (const track of myStream.getTracks()) {
+        peer.peer.addTrack(track, myStream);
+      }
+    }
+  }, [myStream]);
+
   const handleCallAccepted = useCallback(
     ({ from, ans }) => {
       peer.setLocalDescription(ans);
+      sendStreams();
     },
-    []
+    [sendStreams]
   );
 
-  // const handleNegoNeeded = useCallback(async () => {
-  //   const offer = await peer.getOffer();
-  //   socket.emit("peer:nego:needed", { offer, to: remoteSocketId });
-  // }, [remoteSocketId, socket]);
+  const handleNegoNeeded = useCallback(async () => {
+    const offer = await peer.getOffer();
+    socket.emit("peer:nego:needed", { offer, to: remoteSocketId });
+  }, [remoteSocketId, socket]);
 
-  // useEffect(() => {
-  //   peer.peer.addEventListener("negotiationneeded", handleNegoNeeded);
-  //   return () => {
-  //     peer.peer.removeEventListener("negotiationneeded", handleNegoNeeded);
-  //   };
-  // }, [handleNegoNeeded]);
+  useEffect(() => {
+    peer.peer.addEventListener("negotiationneeded", handleNegoNeeded);
+    return () => {
+      peer.peer.removeEventListener("negotiationneeded", handleNegoNeeded);
+    };
+  }, [handleNegoNeeded]);
 
   const handleNegoNeedIncomming = useCallback(
     async ({ from, offer }) => {
@@ -53,9 +121,9 @@ const ListenerRoomPage = () => {
   }, []);
 
   useEffect(() => {
-    peer.peer.addEventListener("track", (ev) => {
-      const remoteStream = ev.streams[0];
-      setRemoteStream(remoteStream);
+    peer.peer.addEventListener("track", async (ev) => {
+      const remoteStream = ev.streams;
+      setRemoteStream(remoteStream[0]);
     });
   }, []);
 
@@ -83,7 +151,9 @@ const ListenerRoomPage = () => {
   ]);
 
   return (
-    <div>
+    <>
+      <h1>Listener Room</h1>
+      <h4>{remoteSocketId ? "Connected" : "No one in room"}</h4>
       {remoteStream && (
         <>
           <h1>Remote Audio Stream</h1>
@@ -98,9 +168,11 @@ const ListenerRoomPage = () => {
             }}
           />
         </>
-      )}
-    </div>
+      )
+      }
+    </>
   );
-};
+}
 
+const ListenerRoomPage = connect(mapStateToProps, mapDispatchToProps)(ListenerRoomBase);
 export default ListenerRoomPage;
