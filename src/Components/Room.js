@@ -3,12 +3,17 @@ import peer from "./peer";
 import { useSocket } from "./SocketProvider";
 import { FaMicrophone, FaMicrophoneSlash } from "react-icons/fa";
 import { connect } from "react-redux";
+import webrtcDataActions from "../store/actions/webrtcAction";
 
 const mapStateToProps = (state) => {
   return {
-    profileId: state?.webrtcReducer?.profileId
+    profileId: state?.webrtcReducer?.profileId,
+    languageCode: state?.webrtcReducer?.code
   }
 };
+const mapDispatchToProps = {
+  putVioceForTranslation: webrtcDataActions.putVioceForTranslation
+}
 
 const RoomPageBase = (props) => {
   const socket = useSocket();
@@ -16,7 +21,7 @@ const RoomPageBase = (props) => {
   const [myStream, setMyStream] = useState();
   const [remoteStream, setRemoteStream] = useState();
   const [isMuted, setIsMuted] = useState(false);
-  const { profileId } = props;
+  const { profileId, putVioceForTranslation,languageCode } = props;
 
   const handleUserJoined = useCallback(({ email, id }) => {
     setRemoteSocketId(id);
@@ -51,6 +56,12 @@ const RoomPageBase = (props) => {
     },
     [socket]
   );
+
+  useEffect(() => {
+    if (myStream) {
+      putVioceForTranslation(myStream,languageCode);
+    }
+  }, [myStream, putVioceForTranslation,languageCode])
 
   const sendStreams = useCallback(() => {
     if (myStream) {
@@ -166,5 +177,5 @@ const RoomPageBase = (props) => {
     </div>
   );
 };
-const RoomPage = connect(mapStateToProps, null)(RoomPageBase);
+const RoomPage = connect(mapStateToProps, mapDispatchToProps)(RoomPageBase);
 export default RoomPage;

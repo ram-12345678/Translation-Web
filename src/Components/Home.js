@@ -4,26 +4,28 @@ import { Form, Row, Col, Button, Input, Select } from 'antd';
 import { useNavigate } from "react-router-dom";
 import { useSocket } from "./SocketProvider";
 import { languages } from "../constants/languages";
-import { setUserProfileId } from "../store/actions/webrtcAction";
+import webrtcDataActions from '../store/actions/webrtcAction'
 import './Home.css';
+import { userProfile } from "../constants/userProfile";
 
 const { Option } = Select;
 
-const mapStateToProps = (state) => {
-    return {
-        profileId: state?.webrtcReducer?.profileId
-    }
-};
+// const mapStateToProps = (state) => {
+//     return {
+//         profileId: state?.webrtcReducer?.profileId
+//     }
+// };
 
-const mapDispatchToProps = (dispatch) => ({
-    dispatchProfileId: (id) => dispatch(setUserProfileId(id))
-})
+const mapDispatchToProps = {
+    fetchUserProfileId: webrtcDataActions.fetchUserProfileId,
+    fetchLanguageCode: webrtcDataActions.fetchLanguageCode
+}
+
 const HomePageBase = (props) => {
     const [email, setEmail] = useState('');
     const [room, setRoom] = useState('');
-    const [languageCode, setLanguageCode] = useState('');
-    const { profileId, dispatchProfileId } = props;
- 
+    const { fetchUserProfileId, fetchLanguageCode } = props;
+
     const socket = useSocket();
     const navigate = useNavigate();
 
@@ -52,7 +54,7 @@ const HomePageBase = (props) => {
     }, [socket, handleJoinRoom]);
 
     const onChangeLanguage = (value) => {
-        setLanguageCode(value)
+        fetchLanguageCode(value)
     }
     return (
         <div className="container">
@@ -84,6 +86,7 @@ const HomePageBase = (props) => {
                                 <Input
                                     type="email"
                                     id="email"
+                                    placeholder='Please Enter Email ID'
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                 />
@@ -99,6 +102,7 @@ const HomePageBase = (props) => {
                                 <Input
                                     type="number"
                                     id="room"
+                                    placeholder='Please Enter Room Number'
                                     value={room}
                                     onChange={(e) => setRoom(e.target.value)}
                                 />
@@ -108,29 +112,26 @@ const HomePageBase = (props) => {
                             <Form.Item
                                 label="Profile ID"
                                 name="profile"
-                                rules={[{ required: true, message: 'Please Enter Profile ID' },
+                                rules={[{ required: true, message: 'Please Selec Profile' },
                                 ]}
                             >
-                                <Input
-                                    type="number"
-                                    id="profile"
-                                    value={profileId}
-                                    onChange={(e) => dispatchProfileId(e.target.value)}
-                                />
+                                <Select onChange={(e) => fetchUserProfileId(e?.target?.value)} id="profile" placeholder='Please Select Profile'>
+                                    {userProfile?.map(item => <Option key={item?.id} value={item?.id} >{item?.name}</Option>)}
+                                </Select>
                             </Form.Item>
                         </Col>
-                        {profileId && profileId === '2' && <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+                        <Col xs={24} sm={24} md={12} lg={12} xl={12}>
                             <Form.Item
                                 label="Language"
                                 name="language"
-                                rules={[{ required: true, message: 'Please Select Language' },
+                                rules={[{ required: true, message: 'Please Select Target Language' },
                                 ]}
                             >
-                                <Select onChange={onChangeLanguage} id="language">
+                                <Select onChange={onChangeLanguage} id="language" placeholder='Please Select Target Language'>
                                     {languages.map(item => <Option key={item.id} value={item.code} >{item.name}</Option>)}
                                 </Select>
                             </Form.Item>
-                        </Col>}
+                        </Col>
                         <Col xs={24} sm={24} md={12} lg={12} xl={12}>
                             <Form.Item
                                 wrapperCol={{
@@ -150,5 +151,5 @@ const HomePageBase = (props) => {
     );
 };
 
-const HomePage = connect(mapStateToProps, mapDispatchToProps)(HomePageBase);
+const HomePage = connect(null, mapDispatchToProps)(HomePageBase);
 export default HomePage;
