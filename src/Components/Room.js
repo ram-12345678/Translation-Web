@@ -2,18 +2,9 @@ import React, { useEffect, useCallback, useState } from "react";
 import peer from "./peer";
 import { useSocket } from "./SocketProvider";
 import { FaMicrophone, FaMicrophoneSlash } from "react-icons/fa";
-import { connect } from "react-redux";
-import webrtcDataActions from "../store/actions/webrtcAction";
-
-const mapStateToProps = (state) => {
-  return {
-    profileId: state?.webrtcReducer?.profileId,
-    languageCode: state?.webrtcReducer?.code
-  }
-};
-const mapDispatchToProps = {
-  putVioceForTranslation: webrtcDataActions.putVioceForTranslation
-}
+import { useDispatch } from 'react-redux';
+import { postData } from "../store/axiosApiCall/axiosApiCall";
+import { message as antMessage } from "antd";
 
 const RoomPageBase = (props) => {
   const socket = useSocket();
@@ -21,20 +12,61 @@ const RoomPageBase = (props) => {
   const [myStream, setMyStream] = useState();
   const [remoteStream, setRemoteStream] = useState();
   const [isMuted, setIsMuted] = useState(false);
-  const { profileId, putVioceForTranslation,languageCode } = props;
+  const { profileId, languageCode } = props;
+  const dispatch = useDispatch();
+
+  let recognition;
+  let recording = false;
+  let lastTranscript = '';
 
   const handleUserJoined = useCallback(({ email, id }) => {
     setRemoteSocketId(id);
   }, []);
 
+  const initializeRecognition = () => {
+    recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = languageCode;
+    recognition.continuous = true;
+    recognition.interimResults = false;
+
+    recognition.onresult = function (event) {
+      let transcript = event.results[event.resultIndex][0].transcript.trim();
+      if (transcript && transcript !== lastTranscript) {
+        lastTranscript = transcript;
+        // document.getElementById('recognized-text').innerText = transcript;
+        dispatch(postData({ text: transcript, lang: languageCode }));
+      }
+    };
+
+    recognition.onerror = function (event) {
+      console.error('Speech recognition error', event.error);
+    };
+  }
+
+  const startRecording = () => {
+    if (!recording) {
+      initializeRecognition();
+      recognition.start();
+      recording = true;
+      // document.getElementById('start-record-btn').style.display = 'none';
+      // document.getElementById('stop-record-btn').style.display = 'inline-block';
+    }
+  }
+
+  const stopRecording = () => {
+    if (recording) {
+      // Uncomment the next line if you want to stop recognition explicitly
+      // recognition.stop();
+      recording = false;
+      // document.getElementById('start-record-btn').style.display = 'inline-block';
+      // document.getElementById('stop-record-btn').style.display = 'none';
+      lastTranscript = '';
+    }
+  }
+
   const handleCallUser = useCallback(async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: false,
-    });
     const offer = await peer.getOffer();
     socket.emit("user:call", { to: remoteSocketId, offer });
-    setMyStream(stream);
   }, [remoteSocketId, socket]);
 
   useEffect(() => {
@@ -57,12 +89,6 @@ const RoomPageBase = (props) => {
     [socket]
   );
 
-  useEffect(() => {
-    if (myStream) {
-      putVioceForTranslation(myStream,languageCode);
-    }
-  }, [myStream, putVioceForTranslation,languageCode])
-
   const sendStreams = useCallback(() => {
     if (myStream) {
       for (const track of myStream.getTracks()) {
@@ -70,6 +96,8 @@ const RoomPageBase = (props) => {
       }
     }
   }, [myStream]);
+
+  console.log(myStream, 'myStream')
 
   const handleCallAccepted = useCallback(
     ({ from, ans }) => {
@@ -134,17 +162,20 @@ const RoomPageBase = (props) => {
   ]);
 
   const toggleMute = () => {
-    if (myStream) {
-      myStream.getAudioTracks().forEach((track) => {
-        track.enabled = !track.enabled;
-      });
-      setIsMuted(!isMuted);
+    setIsMuted(!isMuted);
+  }
+  useEffect(() => {
+    if (isMuted) {
+      stopRecording();
+    } else {
+      startRecording();
     }
-  };
+  }, [isMuted])
 
   return (
     <div>
-      {profileId === '1' ? <>
+      {/* {remoteSocketId && <button onClick={handleCallUser}>Call</button>} */}
+      {profileId === 1 ? <>
         <h1>Host Room</h1>
         <h4>{remoteSocketId ? "Connected" : "No one in room"}</h4>
         {myStream && (
@@ -177,5 +208,6 @@ const RoomPageBase = (props) => {
     </div>
   );
 };
-const RoomPage = connect(mapStateToProps, mapDispatchToProps)(RoomPageBase);
+// const RoomPage = connect(mapStateToProps, mapDispatchToProps)
+const RoomPage = RoomPageBase;
 export default RoomPage;

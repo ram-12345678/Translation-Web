@@ -17,7 +17,7 @@ const { Option } = Select;
 // };
 
 const mapDispatchToProps = {
-    // fetchUserProfileId: webrtcDataActions.fetchUserProfileId,
+    fetchUserProfileId: webrtcDataActions.fetchUserProfileId,
     fetchLanguageCode: webrtcDataActions.fetchLanguageCode
 }
 
@@ -25,8 +25,7 @@ const HomePageBase = (props) => {
     const [email, setEmail] = useState('');
     const [room, setRoom] = useState('');
     const [profileId, setProfileId] = useState('');
-
-    const { fetchLanguageCode } = props;
+    const { fetchLanguageCode,fetchUserProfileId } = props;
 
     const socket = useSocket();
     const navigate = useNavigate();
@@ -40,9 +39,9 @@ const HomePageBase = (props) => {
 
     const handleJoinRoom = useCallback(
         (data) => {
-            const { profileId } = data;
-            if (profileId) {
-                profileId === 1 ? navigate(`/hostRoom/${profileId}`) : navigate(`/ListenerRoom/${profileId}`)
+            const { email, room, profileId } = data;
+            if (room && profileId) {
+                navigate(`/room/${room}`)
             }
         },
         [navigate]
@@ -61,8 +60,9 @@ const HomePageBase = (props) => {
 
     const onChangeProfileId = (value) => {
         setProfileId(value)
+        fetchUserProfileId(value)
     }
-    
+
     return (
         <div className="container">
             <h1>Welcome to My Translation Web Page</h1>
@@ -134,7 +134,7 @@ const HomePageBase = (props) => {
                                 rules={[{ required: true, message: 'Please Select Target Language' },
                                 ]}
                             >
-                                <Select  onChange={onChangeLanguage} id="language" placeholder='Please Select Target Language'>
+                                <Select onChange={onChangeLanguage} id="language" placeholder='Please Select Target Language'>
                                     {languages.map(item => <Option key={item.id} value={item.code} >{item.name}</Option>)}
                                 </Select>
                             </Form.Item>

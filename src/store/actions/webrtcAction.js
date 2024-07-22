@@ -42,10 +42,10 @@ webrtcDataActions.setRemoteSocketId = (remoteSocketId) => ({
 
 webrtcDataActions.putVioceForTranslation = (myStream, language) => {
     const params = { myStream, language }
-    const data = axiosPostApi(baseUrl, params);
-    if (data) {
-        receiveVoice(data)
-    }
+    // const data = axiosPostApi(baseUrl, params);
+    // if (data) {
+    //     receiveVoice(data)
+    // }
 }
 
 export default webrtcDataActions;
